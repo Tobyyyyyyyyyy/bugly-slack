@@ -15,12 +15,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)s lineno:%(lineno)d %(message)s")
 logger = logging.getLogger('bugly.slack')
 
-HOMEPAGE = 'http://apidoc.haierzhongyou.com/'
+HOMEPAGE = 'https://www.taptap.com/app/180786/'
 
-BUGLY_ICON = (
-    'http://image.i.haierzhongyou.com/'
-    'dz/bugly/bugly.jpeg'
-)
+BUGLY_ICON = 'https://img.tapimg.com/market/lcs/82662c7df7664b7e977381f146e94886_360.png?imageMogr2/auto-orient/strip'
 
 class BuglySlack(object):
 
@@ -38,9 +35,9 @@ class BuglySlack(object):
             payload['channel'] = channel
 
         kwargs = dict(
-            data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
-            timeout=self.timeout,
+            data = json.dumps(payload),
+            headers = {'Content-Type': 'application/json'},
+            timeout = self.timeout,
         )
 
         if gevent:
@@ -57,24 +54,49 @@ class BuglySlack(object):
         event_type = body["eventType"]
 
         appId = event_content["appId"]
-        appName = event_content["appName"]
         happenDate = event_content["date"]
         appUrl = event_content["appUrl"]
+        datas = event_content["datas"]
 
-        attachment = {}
-
-        attachment['author_name'] = appName
-        attachment['author_link'] = 'https://bugly.qq.com/v2/analytics/dashboard/{}?pid=1'.format(appId)
-
-        text = u'%s %s%s <%s|%s>' % (
-            happenDate,
-            u'每日Crash统计，事件类型:', event_type,
-            appUrl, u'appid:{}'.format(appId),
-        )
-
-        attachment['text'] = text
-        attachment['mrkdwn_in'] = ['text']
-        return {'attachments': [attachment]}
+        blocks = []
+        blocks.append({
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "每日崩溃统计({})".format(happenDate)
+			}
+		})
+        for item in datas :
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*V {}*".format(item["version"])
+                }
+		    })
+            blocks.append({
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "*联网用户数:*\n{}".format(item["accessUser"])
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": "*崩溃次数*\n{}".format(item["crashCount"])
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": "*崩溃用户数*\n{}".format(item["crashUser"])
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": "*崩溃率*\n0.5%".format(float(item["crashUser"]) / item["accessUser"] * 100)
+                    }
+                ]
+            })
+        print(json.dumps(blocks))
+        return {'blocks': json.dumps(blocks)}
 
     def __call__(self, environ, start_response):
         req = BaseRequest(environ)
@@ -106,7 +128,7 @@ def response(start_response, code='200 OK', body='ok', headers=None):
         ('Content-Length', str(len(body))),
     ])
     start_response(code, headers)
-    return [body]
+    return [body.encode()]
 
 
 def redirect_homepage(start_response):
