@@ -7,7 +7,7 @@
 配置环境
 
 ```shell
-pip install requests; pip install Werkzeug
+pip install -r requirements.txt
 ```
 
 启动服务
